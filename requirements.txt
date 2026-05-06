@@ -1,0 +1,4 @@
+requests
+httpx
+playwright
+beautifulsoup4
