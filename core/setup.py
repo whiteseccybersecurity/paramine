@@ -5,16 +5,28 @@ import os
 
 from core.logger import info
 
+# =====================================
+# GO TOOLS
+# =====================================
+
 TOOLS = {
     "waybackurls": "go install github.com/tomnomnom/waybackurls@latest",
     "gau": "go install github.com/lc/gau/v2/cmd/gau@latest"
 }
+
+# =====================================
+# PYTHON PACKAGES
+# =====================================
 
 PYTHON_PACKAGES = [
     "requests",
     "httpx",
     "beautifulsoup4"
 ]
+
+# =====================================
+# SETUP CACHE FILE
+# =====================================
 
 SETUP_FILE = ".paramine_setup"
 
@@ -24,7 +36,38 @@ SETUP_FILE = ".paramine_setup"
 
 def tool_exists(tool):
 
-    return shutil.which(tool) is not None
+    # NORMAL PATH
+    if shutil.which(tool):
+        return True
+
+    # GOPATH/BIN FALLBACK
+    try:
+
+        gopath = subprocess.check_output(
+            ["go", "env", "GOPATH"],
+            text=True
+        ).strip()
+
+        gobin = os.path.join(
+            gopath,
+            "bin",
+            tool
+        )
+
+        if os.path.exists(gobin):
+
+            # AUTO ADD TO PATH
+            os.environ["PATH"] += (
+                os.pathsep
+                + os.path.join(gopath, "bin")
+            )
+
+            return True
+
+    except:
+        pass
+
+    return False
 
 # =====================================
 # SETUP DONE
@@ -46,7 +89,7 @@ def mark_setup_done():
         f.write("done")
 
 # =====================================
-# GO CHECK
+# ENSURE GO
 # =====================================
 
 def ensure_go():
@@ -55,10 +98,39 @@ def ensure_go():
 
         print(
             "\n[ERROR] Go is not installed\n"
-            "Download Go from: https://go.dev/dl/\n"
+            "Download Go from:\n"
+            "https://go.dev/dl/\n"
         )
 
         sys.exit()
+
+# =====================================
+# ENSURE GO PATH
+# =====================================
+
+def ensure_go_path():
+
+    try:
+
+        gopath = subprocess.check_output(
+            ["go", "env", "GOPATH"],
+            text=True
+        ).strip()
+
+        gobin = os.path.join(
+            gopath,
+            "bin"
+        )
+
+        # ADD RUNTIME PATH
+        if gobin not in os.environ["PATH"]:
+
+            os.environ["PATH"] += (
+                os.pathsep + gobin
+            )
+
+    except:
+        pass
 
 # =====================================
 # INSTALL PYTHON PACKAGE
@@ -103,7 +175,8 @@ def install_go_tool(name, command):
         subprocess.run(
             command,
             shell=True,
-            check=False
+            check=False,
+            env=os.environ
         )
 
     except Exception as e:
@@ -238,6 +311,18 @@ def playwright_ok():
 
 def setup_environment():
 
+    # ---------------------------------
+    # GO
+    # ---------------------------------
+
+    ensure_go()
+
+    ensure_go_path()
+
+    # ---------------------------------
+    # ALREADY SETUP
+    # ---------------------------------
+
     if setup_done():
 
         info(
@@ -253,13 +338,27 @@ def setup_environment():
 
     info("[SETUP] Checking environment")
 
-    ensure_go()
+    # ---------------------------------
+    # PYTHON PACKAGES
+    # ---------------------------------
 
     ensure_python_packages()
 
+    # ---------------------------------
+    # GO TOOLS
+    # ---------------------------------
+
     ensure_go_tools()
 
+    # ---------------------------------
+    # PLAYWRIGHT
+    # ---------------------------------
+
     fix_playwright()
+
+    # ---------------------------------
+    # DONE
+    # ---------------------------------
 
     mark_setup_done()
 
