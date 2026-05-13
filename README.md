@@ -708,6 +708,3 @@ Paramine is intended for:
 * educational use
 
 Do NOT use against systems without permission.
-
-```
-```
